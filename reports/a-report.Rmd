@@ -30,6 +30,11 @@ Levando em consideração todo o conteúdo da rede do parlamentar, dessa forma t
 dados_parlamentares$n_total <- dados_parlamentares$n_proprio + dados_parlamentares$n_retweet
 ```
 
+Vamos considerar apenas parlamentares que possuam um perfil e tenham postado algo (de autoria própria ou comentando/retweetando). Sendo assim, vamos filtrar o dataset:
+```{r}
+dados_parlamentares_filtrado = subset(dados_parlamentares, !is.na(twitter) & n_total > 0)
+```
+
 Fazendo o agrupamento por partido e ordenando os dados de maneira decrescente, temos:
 ```{r}
 dados_partidos = dados_parlamentares %>% group_by(partido) %>% summarise(tweets = sum(n_total))
@@ -51,19 +56,23 @@ grafico_partidos_x_tweets
 ```
 Conseguimos observar que a quantidade de tweets por partido segue basicamente um padrão onde os maiores partidos do nosso país (como PT, PODE, PSOL) possuem uma quantidade de tweets bem superior a partidos menores como REDE, PATRI, PV, DC, PPL, conforme esperado.
 
-### 1.0. Qual proporção desses tweets foi de fato criada? Qual proporção foi comentada/compartilhada?
 
-### 1.1. Será que a quantidade de parlamentares dos partidos tem uma grande influência nisso? (i.e. será que o PT, possui maior quantidade de tweets pois existem mais parlamentares no partido? Ou seus poucos parlamentares seriam mais ativos em suas redes?)
+### 1.1. Qual proporção desses tweets foi de fato criada? Qual proporção foi comentada/compartilhada?
+Respondendo essa pergunta podemos analisar quanto conteúdo de fato é criado pelos partidos e quanto conteúdo é apenas compartilhado.
+```{r}
+```
 
-### 1.2. Os partidos com mais tweets são aqueles que possuem parlamentares mais populares (comparar pelo engajamento)?
+### 1.2. Qual relação entre o número de parlamentares e o número de tweets por partido?
+Será que o número de parlamentares por partido tem uma relação direta entre o números de tweets desse mesmo partido? Podemos colocar essas duas variáveis em um gráfico para a análise, assim:
+```{r}
+parlamentares_x_partidos
+```
+
+### 1.3. Os partidos com mais tweets são aqueles que possuem parlamentares mais populares?
+Utilizando o engajamento total para definir os parlamentares mais populares, temos:
 
 ## 2. Existe alguma relação entre os engajamentos (total/mediano/máximo) e a quantidade de tweets dos parlamentares?
 Pensamento inicial: Dado que existe mais conteúdo para que seus seguidores possam compartilhar, espero que os partidos que tenham parlamentares com perfis mais ativos possuam maiores engajamentos.
-
-Vamos considerar apenas parlamentares que possuam um perfil e tenham postado algo (de autoria própria ou comentando/retweetando). Sendo assim, vamos filtrar o dataset:
-```{r}
-dados_parlamentares_filtrado = subset(dados_parlamentares, !is.na(twitter) & n_total > 0)
-```
 
 Analisando a relação entre o engajamento total dos parlamentares e o número de tweets + retweets:
 ```{r}
