@@ -183,6 +183,8 @@ grafico_engaj_total_partido_x_tweets <- dados_partidos_filtrado %>%
 
 grafico_engaj_total_partido_x_tweets
 ```
+Percebemos aqui que aparentemente, existe uma correleção crescente entre o número de conteúdo compartilhado e engajamento total dos partidos (i.e. quanto mais conteúdo é publicado por um partido, mais engajamento total o esse conteúdo tem). Seria interessante termos um conjunto de observações maior para podermos afirmar isso com mais segurança.
+
 
 Analisando a relação entre o engajamento máximo dos partidos e o número de tweets:
 ```{r}
@@ -200,6 +202,9 @@ grafico_engaj_max_partido_x_tweets <- dados_partidos_filtrado %>%
 
 grafico_engaj_max_partido_x_tweets
 ```
+Aparentemente, também temos uma correlação crescente entre a quantidade de conteúda postada e o engajamento máximo dos partidos para as observações que temos. Novamente enfatizo: por termos poucas observações, seria interessante que tivéssemos um conjunto maior para podermos validar de fato essa correlação.
+
+É interessante notar que, ao agrupar por partido, observamos uma relação entre a quantidade de conteúdo publicado por esse partido e os engajamentos (total e máximo). Isso é bem complicado de visualizar quando tentamos relacionar os engajamentos (também total e máximo, porém individuais) de cada parlamentar em si com o seu conteúdo publicado.
 
 ### 2.2. Quais são os partidos com maiores e menores engajamentos (total/máximo)?
 Sabemos a correlação entre os engajamentos máximos e total dos parlamentares e dos partidos e o número de postagens nas redes dos mesmos. Vamos descobrir agora quais são os partidos mais populares (i.e. os que possuem maior engajamento).
