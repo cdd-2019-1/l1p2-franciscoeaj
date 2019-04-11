@@ -1,0 +1,244 @@
+---
+title: "Lab. 01 - Parte 2 - AD1/CDD"
+author: Francisco Edeverton de Almeida Júnior
+output:
+    html_document:
+      df_print: paged
+      toc: true
+      toc_float:
+        collapsed: false
+theme: sandstone
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(plotly)
+source(here::here("code/lib.R"))
+theme_set(theme_bw())
+```
+
+```{r read}
+dados_parlamentares = read_projectdata()
+```
+
+# Introdução
+Faremos uma análise exploratória nos dados coletados dos perfis do Twitter dos parlamentares. Acredito que as perguntas que escolhi para responder talvez possam nos surpreender. Decidi deixar abaixo da pergunta o que penso (de acordo com minha opinião sobre o assunto) que podemos obter nas respostas de fato, são as mesmas respostas que estiveram na parte 1 deste mesmo laboratório.
+
+# Perguntas
+
+## 1. Qual a quantidade de tweets por partido?
+Meu pensamento inicial inicial sobre o assunto foi: Espero que parlamentares de partidos/estados maiores (geograficamente ou demograficamente) tenham um perfil mais ativo (i.e. publiquem mais conteúdo - próprio ou retweets). Não sei o que esperar quando este agrupamento for feito por casa (câmara/senado).
+
+Levando em consideração todo o conteúdo da rede do parlamentar, dessa forma temos que n_total = n_proprio + n_retweet.
+```{r}
+dados_parlamentares$n_total <- dados_parlamentares$n_proprio + dados_parlamentares$n_retweet
+```
+
+Vamos considerar apenas parlamentares que possuam um perfil e tenham postado algo (de autoria própria ou comentando/retweetando). Sendo assim, vamos filtrar o dataset:
+```{r}
+dados_parlamentares_filtrado = subset(dados_parlamentares, !is.na(twitter) & n_total > 0)
+```
+
+Fazendo o agrupamento por partido e ordenando os dados de maneira decrescente, temos:
+```{r}
+dados_partidos = dados_parlamentares %>% group_by(partido) %>% summarise(tweets = sum(n_total)) %>% arrange(desc(tweets))
+```
+
+Agora, tratando um pouco os dados (removendo colunas NA em partido ou tweets):
+```{r message=FALSE, warning=FALSE}
+dados_partidos_filtrado = subset(dados_partidos, !is.na(partido) & !is.na(tweets))
+
+dados_partidos_filtrado$partido <- factor(dados_partidos_filtrado$partido, levels = unique(dados_partidos_filtrado$partido)[order(dados_partidos_filtrado$tweets, decreasing = TRUE)])
+
+grafico_partidos_x_tweets <- dados_partidos_filtrado %>% 
+  plot_ly(x = ~partido, y = ~tweets) %>%
+  layout(title = "Quantidade de tweets por partido", xaxis = list(title = "Partido"), yaxis = list(title = "Núm. tweets")) %>%
+  add_bars()
+
+grafico_partidos_x_tweets
+```
+Conseguimos observar que a quantidade de tweets por partido segue basicamente um padrão onde os maiores partidos do nosso país (como PT, PODE, PSOL) possuem uma quantidade de tweets bem superior a partidos menores como REDE, PATRI, PV, DC, PPL, conforme esperado.
+
+Os itens 1.1. e 1.2. abaixo foram criados a partir da análise dos dados da pergunta 1.
+
+### 1.1. Qual proporção desses tweets foi de fato criada? Qual proporção foi comentada/compartilhada?
+Respondendo essa pergunta podemos analisar quanto conteúdo de fato é criado pelos partidos e quanto conteúdo é apenas compartilhado.
+
+Primeiro, iremos particionar o dataset que contém os dados dos partidos e o total de tweets, assim:
+```{r}
+dados_partidos = dados_parlamentares %>% group_by(partido) %>% summarise(tweets = sum(n_total), total_proprio = sum(n_proprio), total_compartilhado = sum(n_retweet)) %>% arrange(desc(tweets))
+
+dados_partidos_filtrado = subset(dados_partidos, !is.na(partido) & !is.na(tweets) & tweets > 0)
+```
+
+Agora, vamos visualizar essas informações em um gráfico:
+```{r message=FALSE, warning=FALSE}
+grafico_proporcao_tweets <- dados_partidos %>%
+  plot_ly(
+    x = ~partido,
+    y = ~total_proprio,
+    name = "Conteúdo de autoria própria"
+  ) %>% 
+  add_bars() %>%
+  add_trace(y = ~total_compartilhado, name = "Conteúdo compartilhado") %>%
+  layout(title = "Conteúdo criado X Conteúdo compartilhado", yaxis = list(title = "contagem", barmode = "group"))
+  
+grafico_proporcao_tweets
+```
+Analisando o gráfico, podemos perceber que a maioria do conteúdo postado pelos partidos é de autoria própria, mas uma boa parcela também é compartilhada por seus parlamentares.
+
+### 1.2. Qual relação entre o número de parlamentares e o número de tweets por partido?
+Será que o número de parlamentares por partido tem uma relação direta entre o números de tweets desse mesmo partido? Podemos colocar essas duas variáveis em um gráfico para a análise, assim:
+
+Fazendo a contagem de parlamentares e o somatório de tweets e filtrando apenas os partidos que fizeram pelo menos uma postagem:
+```{r}
+dados_partidos = dados_parlamentares %>%
+  group_by(partido) %>% summarise(qtd_parlamentares = n(), tweets = sum(n_total)) %>% arrange(desc(tweets))
+
+dados_partidos_filtrado = subset(dados_partidos, !is.na(partido) & !is.na(tweets) & tweets > 0)
+```
+
+Agora, podemos desenhar o gráfico Núm. de tweets vs. Quantidade de parlamentares dos partidos, para análise:
+```{r}
+tweets_x_parlamentares_grafico = dados_partidos_filtrado %>% 
+  plot_ly(
+    x = ~qtd_parlamentares,
+    y = ~tweets,
+    type = "scatter",
+    mode = "markers"
+  ) %>% layout(
+    title = "Gráfico - Núm. tweets x Quantidade de parlamentares",
+    xaxis = list(title = "Quantidade de parlamentares"),
+    yaxis = list(title = "Núm. tweets")
+  )
+
+tweets_x_parlamentares_grafico
+```
+Percebemos que há sim uma relação crescente entre as variáveis (i.e. quanto mais parlamentares no partido, mais conteúdo esse partido produz), no entanto, talvez com uma amostra maior de dados (mais parlamentares e mais partidos), pudéssemos realizar essa afirmação com uma segurança maior.
+
+## 2. Existe alguma relação entre os engajamentos (total/máximo) e a quantidade de tweets dos parlamentares?
+Meu pensamento inicial inicial sobre o assunto foi: Dado que existe mais conteúdo para que seus seguidores possam compartilhar, espero que os partidos que tenham parlamentares com perfis mais ativos possuam maiores engajamentos.
+
+Analisando a relação entre o engajamento total dos parlamentares e o número de tweets + retweets:
+```{r}
+grafico_engaj_total_x_tweets <- dados_parlamentares_filtrado %>%
+  plot_ly(
+    x = ~n_total,
+    y = ~engaj_total,
+    type = "scatter",
+    mode = "markers"
+  ) %>% layout(
+    title = "Engajamento total x Número de tweets + retweets dos parlamentares",
+    xaxis = list(title = "Núm. tweets + retweets"),
+    yaxis = list(title = "Engajamento total")
+  )
+
+grafico_engaj_total_x_tweets
+```
+Como há uma dispersão bem grande nos dados do gráfico, aparentemente não há uma relação muito clara entre o engajamento total dos parlamentares e a quantidade de conteúdo gerada por esse parlamentar. Também é válido ressaltar que existem parlamentares muitos tweets e baixo engajamento total se comparado com outros, bem como o contrário (parlamentares com bem menos tweets e engajamento total bem maior).
+
+Analisando a relação entre o engajamento máximo dos parlamentares e o número de tweets + retweets:
+```{r}
+grafico_engaj_max_x_tweets <- dados_parlamentares_filtrado %>%
+  plot_ly(
+    x = ~n_total,
+    y = ~engaj_max,
+    type = "scatter",
+    mode = "markers"
+  ) %>% layout(
+    title = "Engajamento máximo x Número de tweets + retweets dos parlamentares",
+    xaxis = list(title = "Núm. tweets + retweets"),
+    yaxis = list(title = "Engajamento máximo")
+  )
+
+grafico_engaj_max_x_tweets
+```
+Temos algo bastante parecido com o gráfico anterior: uma relação não muito clara entre essas variáveis pois temos pontos bem dispersos no gráfico. Podemos concluir que não há (ou há uma baixa) correlação entre essas variáveis.
+
+Os itens 2.1. e 2.2. abaixo foram criados a partir da análise dos dados da pergunta 2.\
+
+### 2.1. E ao analisarmos agrupando por partido? Existe alguma relação entre os engajamentos (total/máximo) e a quantidade de tweets dos partidos?
+Apenas explicando o tratamento feito abaixo: para manter o padrão do conjunto de dados, o engajamento total de um partido será o somatório de todos os engajamentos totais de seus parlamentares e o engajamento máximo de um partido será o máximo de todos os engajamentos máximos de seus parlamentares.
+
+Modificando então o dataset para obtermos as métricas acima citadas e filtrando novamente:
+```{r}
+dados_partidos = dados_parlamentares %>% group_by(partido) %>% summarise(tweets = sum(n_total), engaj_total_partido = sum(engaj_total), engaj_mediano_partido = median(engaj_mediano), engaj_max_partido = max(engaj_max))
+
+dados_partidos_filtrado = subset(dados_partidos, !is.na(partido) & !is.na(tweets) & tweets > 0)
+```
+
+Analisando a relação entre o engajamento total dos partidos e o número de tweets:
+```{r}
+grafico_engaj_total_partido_x_tweets <- dados_partidos_filtrado %>%
+  plot_ly(
+    x = ~tweets,
+    y = ~engaj_total_partido,
+    type = "scatter",
+    mode = "markers"
+  ) %>% layout(
+    title = "Engajamento total x Número de tweets + retweets dos partidos",
+    xaxis = list(title = "Núm. tweets + retweets"),
+    yaxis = list(title = "Engajamento total")
+  )
+
+grafico_engaj_total_partido_x_tweets
+```
+
+Analisando a relação entre o engajamento máximo dos partidos e o número de tweets:
+```{r}
+grafico_engaj_max_partido_x_tweets <- dados_partidos_filtrado %>%
+  plot_ly(
+    x = ~tweets,
+    y = ~engaj_max_partido,
+    type = "scatter",
+    mode = "markers"
+  ) %>% layout(
+    title = "Engajamento máximo x Número de tweets + retweets dos partidos",
+    xaxis = list(title = "Núm. tweets + retweets"),
+    yaxis = list(title = "Engajamento máximo")
+  )
+
+grafico_engaj_max_partido_x_tweets
+```
+
+### 2.2. Quais são os partidos com maiores e menores engajamentos (total/máximo)?
+Sabemos a correlação entre os engajamentos máximos e total dos parlamentares e dos partidos e o número de postagens nas redes dos mesmos. Vamos descobrir agora quais são os partidos mais populares (i.e. os que possuem maior engajamento).
+
+Analisando
+```{r}
+dados_partidos_filtrado$partido <- factor(dados_partidos_filtrado$partido, levels = unique(dados_partidos_filtrado$partido)[order(dados_partidos_filtrado$engaj_total_partido, decreasing = TRUE)])
+
+grafico_engajamentos_totais = dados_partidos_filtrado %>%
+  plot_ly(
+    x = ~partido,
+    y = ~engaj_total_partido
+  ) %>% 
+  add_bars() %>%
+  layout(
+    title = "Engajamento tptal dos partidos",
+    yaxis = list(title = "Engajamento"),
+    xaxis = list(title = "Partido")
+  )
+
+grafico_engajamentos_totais
+```
+Vemos que o PT, PSOL, PODE, PCdoB e NOVO possuem os maiores engajamentos totais. Os menores engajamentos totais são dos partidos: PATRI, PV, S/Partido, PROS e REDE. Também é válido ressaltar que existem partidos com engajamento total menor que o grupo "S/ Partido", correspondente a candidatos sem partido algum.
+
+```{r message=FALSE, warning=FALSE}
+dados_partidos_filtrado$partido <- factor(dados_partidos_filtrado$partido, levels = unique(dados_partidos_filtrado$partido)[order(dados_partidos_filtrado$engaj_max_partido, decreasing = TRUE)])
+
+grafico_engajamentos_maximos = dados_partidos_filtrado %>%
+  plot_ly(
+    x = ~partido,
+    y = ~engaj_max_partido
+  ) %>% 
+  add_bars() %>%
+  layout(
+    title = "Engajamento máximo dos partidos",
+    yaxis = list(title = "Engajamento"),
+    xaxis = list(title = "Partido")
+  )
+
+grafico_engajamentos_maximos
+```
+Vemos que PSOL, PODE, PT, PCdoB e REDE possuem os maiores engajamentos máximos. Os menores engajamentos máximos são dos partidos: PV, PATRI, S/Partido, PPS e PROS. A mesma observação do gráfico anterior é válida para esse: evistem partidos (PATRI e PV) que possuem menor engajamento do que o grupo "S/ Partido", que corresponde a candidatos não vinculados a partido político algum.
